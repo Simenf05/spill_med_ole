@@ -1,3 +1,4 @@
+from calendar import c
 import pygame as pg
 import map
 import math
@@ -5,10 +6,6 @@ import math
 
 SCREEN_WIDTH = 1400
 SCREEN_HEIGHT = 800
-
-
-for i in map.maps:
-    print(i)
 
 pg.init()
 
@@ -19,18 +16,37 @@ class Player:
         
         self.box = pg.Rect(coords[0], coords[1], 40, 40)
         self.color = pg.Color("Purple")
+        self.verticalSpeed = 0
         
-    def movement(self, keys):
+        self.onGround = False
+    
+    def updateGrav(self):
+        if self.onGround:
+            self.verticalSpeed = 0
+            
+        else:
+            self.verticalSpeed -= .2
+    
+    def press(self, keys):
+        if keys[pg.K_SPACE] and self.onGround:
+            
+            self.onGround = False
+            self.verticalSpeed += 1
+            
+    def onGroundCheck(self, list) -> bool:
         
-        if keys[pg.K_SPACE]:
-            
-            self.box.move_ip(0, -10)
-            
+        check = self.box.collidelist(list)
+        
+        if check == -1:
+            return False
+        
+        return check
+        
+        
+    def movement(self, move: tuple):
+        self.box.move_ip(move)
+        
 
-class Block:
-    def __init__(self):
-        pass
-        
 
 
 class GameLoop:
@@ -38,26 +54,28 @@ class GameLoop:
     def __init__(self):
         self.screen = pg.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
         self.clock = pg.time.Clock()
+        self.alive = True
         
         self.player = Player((100, 100))
         
         self.blocks = []
+        self.blockSize = 40
+        self.blocksOnScreen = 35
         
-        for i, block in enumerate(map.maps):
-            self.blocks.append(pg.Rect(
+        
+        for i, row in enumerate(map.maps):
+            
+            for j, block in enumerate(row):
                 
-                (i) * (math.floor(SCREEN_WIDTH / len(map.maps))),
-                SCREEN_HEIGHT - (math.floor(SCREEN_HEIGHT / len(block))),
-                
-                
-                (SCREEN_WIDTH / len(map.maps)), 
-                (SCREEN_HEIGHT / len(block))
-                ))
-        
-        
-        self.alive = True
-        
-        
+                if block == "b":
+                    
+                    self.blocks.append(pg.Rect(
+                        
+                        (i) * (math.floor(SCREEN_WIDTH / self.blocksOnScreen)),
+                        SCREEN_HEIGHT - (math.floor((j + 1) * (SCREEN_HEIGHT / len(row)))),
+                        SCREEN_WIDTH / self.blocksOnScreen,
+                        SCREEN_HEIGHT / len(row)
+                        ))
         
         
     def run(self):
@@ -79,9 +97,13 @@ class GameLoop:
             pg.draw.rect(self.screen, self.player.color, self.player.box)
             
             
-        
-            self.player.movement(keys)
+            self.player.onGround = self.player.onGroundCheck(self.blocks)
             
+            self.player.press(keys)
+            
+            self.player.updateGrav()
+            
+            self.player.movement((0, -self.player.verticalSpeed))
             
             pg.display.update()
             self.clock.tick(60)
@@ -94,5 +116,4 @@ class GameLoop:
 if __name__ == "__main__":
     game = GameLoop()
     game.run()
-    
     
